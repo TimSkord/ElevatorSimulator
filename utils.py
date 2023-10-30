@@ -1,5 +1,9 @@
 import bisect
 
+from faker import Faker
+
+fake = Faker()
+
 
 def find_closest(sorted_list, val):
     """Finds the closest value to `val` in the sorted set `sorted_list`."""
@@ -33,3 +37,7 @@ def has_smaller(sorted_list, val):
     """Determines whether the sorted `sorted_list` has values less than `val`."""
     pos = bisect.bisect_left(sorted_list, val)
     return pos > 0
+
+
+def generate_full_name() -> str:
+    return fake.name()

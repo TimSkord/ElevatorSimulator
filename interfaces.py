@@ -51,21 +51,24 @@ class ElevatorInterface(ABC):
 
 
 class PassengerInterface(ABC):
-
+    @abstractmethod
     def __init__(self, current_floor: int, target_floor: int):
         """
         self.current_floor = floor from which the passenger calls the elevator
         self.target_floor = floor to which the passenger calls the elevator
         """
 
+    @abstractmethod
     def call_elevator(self, elevator: 'Elevator') -> None:
         """Adds a floor to the elevator floor queue"""
         pass
 
+    @abstractmethod
     def enter_the_elevator(self, elevator: 'Elevator') -> None:
         """A passenger enters the elevator"""
         pass
 
+    @abstractmethod
     def select_floor(self, elevator: 'Elevator') -> None:
         """The passenger selects a floor, if the floor has already been selected
          - nothing happens."""

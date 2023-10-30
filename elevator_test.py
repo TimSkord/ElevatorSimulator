@@ -1,4 +1,5 @@
-from elevator import Elevator
+from constants import UP_NAME, DOWN_NAME
+from elevator import Elevator, Passenger
 
 
 class TestElevator:
@@ -45,35 +46,35 @@ class TestElevator:
     def test_choose_direction(self):
         self.elevator.add_floor_to_queue(3, 4, 8, 9)
         self.elevator.choose_direction()
-        assert self.elevator.direction == 'up'
+        assert self.elevator.direction == UP_NAME
 
         self.elevator.direction = None
         self.elevator.current_floor = 6
         self.elevator.choose_direction()
-        assert self.elevator.direction == 'down'
+        assert self.elevator.direction == DOWN_NAME
 
-        self.elevator.direction = 'down'
+        self.elevator.direction = DOWN_NAME
         self.elevator.current_floor = 7
         self.elevator.choose_direction()
-        assert self.elevator.direction == 'down'
+        assert self.elevator.direction == DOWN_NAME
 
-        self.elevator.direction = 'up'
+        self.elevator.direction = UP_NAME
         self.elevator.current_floor = 5
         self.elevator.choose_direction()
-        assert self.elevator.direction == 'up'
+        assert self.elevator.direction == UP_NAME
 
-        self.elevator.direction = 'up'
+        self.elevator.direction = UP_NAME
         self.elevator.current_floor = 10
         self.elevator.choose_direction()
-        assert self.elevator.direction == 'down'
+        assert self.elevator.direction == DOWN_NAME
 
-        self.elevator.direction = 'up'
+        self.elevator.direction = UP_NAME
         self.elevator.queue = {2, 8}
         self.elevator.current_floor = 8
         self.elevator.choose_direction()
-        assert self.elevator.direction == 'down'
+        assert self.elevator.direction == DOWN_NAME
 
-        self.elevator.direction = 'up'
+        self.elevator.direction = UP_NAME
         self.elevator.current_floor = 8
         self.elevator.queue = {}
         self.elevator.choose_direction()
@@ -83,7 +84,10 @@ class TestElevator:
         self.elevator.current_floor = 1
         self.elevator.add_floor_to_queue(3, 4, 6)
         self.elevator.move()
+        print(self.elevator)
         self.elevator.move()
+        print(self.elevator)
+
         assert self.elevator.current_floor == 3
         assert 3 not in self.elevator.queue
 
@@ -99,7 +103,7 @@ class TestElevator:
 
         self.elevator.move()
         assert self.elevator.current_floor == 5
-        assert self.elevator.direction == 'down'
+        assert self.elevator.direction == DOWN_NAME
 
         for _ in range(5):
             self.elevator.move()
@@ -117,3 +121,155 @@ class TestElevator:
         self.elevator.move()
         assert self.elevator.current_floor == 3
         assert not self.elevator.doors_open
+
+    def test_overcapacity(self):
+        passengers = [
+            Passenger(target_floor=3),
+            Passenger(target_floor=4),
+            Passenger(target_floor=5),
+            Passenger(target_floor=6),
+            Passenger(target_floor=7),
+        ]
+        self.elevator.current_floor = 1
+        self.elevator.open_doors()
+        self.elevator.capacity = 4
+        for passenger in passengers:
+            passenger.enter_the_elevator(self.elevator)
+        assert len(self.elevator.passengers) == 5
+
+        for passenger in passengers:
+            passenger.select_floor(self.elevator)
+        assert len(self.elevator.queue) == 5
+
+        self.elevator.move()
+        assert not self.elevator.doors_open
+        assert len(self.elevator.passengers) == 4
+
+    def test_abandon_ship(self):
+        passengers = [
+            Passenger(target_floor=3),
+            Passenger(target_floor=4),
+            Passenger(target_floor=5),
+            Passenger(target_floor=6),
+            Passenger(target_floor=7),
+        ]
+        self.elevator.current_floor = 1
+        self.elevator.open_doors()
+        self.elevator.capacity = 4
+        for passenger in passengers:
+            passenger.enter_the_elevator(self.elevator)
+            passenger.select_floor(self.elevator)
+
+        for floor in range(2, 8):
+            self.elevator.move()
+            if floor == 2:
+                assert len(self.elevator.passengers) == 4
+        assert not self.elevator.passengers
+
+    def test_abandon_ship_together(self):
+        passengers = [
+            Passenger(target_floor=3),
+            Passenger(target_floor=4),
+            Passenger(target_floor=4),
+            Passenger(target_floor=6),
+        ]
+        self.elevator.current_floor = 1
+        self.elevator.open_doors()
+        for passenger in passengers:
+            passenger.enter_the_elevator(self.elevator)
+            passenger.select_floor(self.elevator)
+
+        for floor in range(2, 7):
+            self.elevator.move()
+            if floor == 4:
+                assert len(self.elevator.passengers) == 1
+        assert not self.elevator.passengers
+
+    def test_elevator_call_all_at_once(self):
+        passengers = [
+            Passenger(current_floor=7, target_floor=3),
+            Passenger(current_floor=1, target_floor=4),
+            Passenger(current_floor=3, target_floor=4),
+            Passenger(current_floor=9, target_floor=6),
+        ]
+        self.elevator.current_floor = 1
+        for passenger in passengers:
+            passenger.call_elevator(self.elevator)
+        self.elevator.move()
+        print(self.elevator)
+        assert len(self.elevator.queue) == 3
+        assert self.elevator.doors_open
+
+        passengers[1].enter_the_elevator(self.elevator)
+        passengers[1].select_floor(self.elevator)
+
+
+class TestPassenger:
+
+    def setup_method(self):
+        self.passenger = Passenger(current_floor=1)
+        self.elevator = Elevator(top_floor=20)
+
+    def teardown_method(self):
+        del self.passenger
+        del self.elevator
+
+    def test_name_generation(self):
+        assert self.passenger.name
+
+    def test_set_invalid_floor(self):
+        self.passenger.current_floor = 7
+        self.passenger.target_floor = 7
+        assert self.passenger.target_floor != 7
+
+    def test_set_floor(self):
+        self.passenger.target_floor = 2
+        self.passenger.set_a_new_target()
+        assert self.passenger.target_floor != 2
+
+    def test_call_elevator(self):
+        self.passenger.target_floor = 4
+        self.elevator.current_floor = 7
+        self.passenger.call_elevator(self.elevator)
+        assert self.elevator.queue == {1}
+
+        for _ in range(6):
+            self.elevator.move()
+
+        assert self.elevator.current_floor == 1
+        assert self.elevator.doors_open
+
+    def test_passenger_enter_the_elevator(self):
+        self.passenger.target_floor = 4
+        self.elevator.current_floor = 7
+        self.passenger.call_elevator(self.elevator)
+        for _ in range(6):
+            self.elevator.move()
+        self.passenger.enter_the_elevator(self.elevator)
+        assert self.passenger in self.elevator.passengers
+
+    def test_passenger_select_floor(self):
+        self.passenger.target_floor = 4
+        self.elevator.current_floor = 7
+        self.passenger.call_elevator(self.elevator)
+        for _ in range(6):
+            self.elevator.move()
+        self.passenger.enter_the_elevator(self.elevator)
+        self.passenger.select_floor(self.elevator)
+        assert self.passenger.target_floor in self.elevator.queue
+
+    def test_passenger_cant_get_in_when_the_doors_are_closed(self):
+        self.passenger.target_floor = 4
+        self.elevator.current_floor = self.passenger.current_floor
+        self.passenger.enter_the_elevator(self.elevator)
+        assert self.passenger not in self.elevator.passengers
+
+    def test_passenger_leaving_the_elevator(self):
+        self.passenger.target_floor = 4
+        self.elevator.current_floor = self.passenger.current_floor
+        self.elevator.open_doors()
+        self.passenger.enter_the_elevator(self.elevator)
+        self.passenger.select_floor(self.elevator)
+        for _ in range(3):
+            self.elevator.move()
+        assert self.passenger not in self.elevator.passengers
