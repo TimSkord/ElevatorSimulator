@@ -319,7 +319,3 @@ def run_simulation():
             passenger.move()
         print(elevator)
         sleep(1)  # TODO: Remove the string for instant execution
-
-
-if __name__ == "__main__":
-    run_simulation()
