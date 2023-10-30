@@ -1,4 +1,5 @@
 from random import choice, randint
+from time import sleep
 
 from constants import DEFAULT_LOWER_FLOOR, DEFAULT_TOP_FLOOR, DEFAULT_CAPACITY, UP_NAME, DOWN_NAME
 from interfaces import ElevatorInterface, PassengerInterface
@@ -23,25 +24,25 @@ class Elevator(ElevatorInterface):
         }
 
     @property
-    def state(self):
+    def state(self) -> str:
         if self.direction:
             return f"move_{self.direction}"
         return 'idle'
 
     @property
-    def current_floor(self):
+    def current_floor(self) -> int:
         return self._current_floor
 
     @current_floor.setter
-    def current_floor(self, new_floor):
+    def current_floor(self, new_floor: int):
         if self.lower_floor <= new_floor <= self.top_floor:
             self._current_floor = new_floor
 
     @property
-    def movement_permitted(self):
+    def movement_permitted(self) -> bool:
         return len(self.passengers) <= self.capacity
 
-    def to_push_a_random_person_out_of_an_elevator(self):
+    def to_push_a_random_person_out_of_an_elevator(self) -> None:
         if self.movement_permitted:
             return
         weakest_link = choice(list(self.passengers))
@@ -122,7 +123,7 @@ class Elevator(ElevatorInterface):
 
     def rest(self):
         self.direction = None
-        self.close_doors()
+        self.check_doors()
 
     def up_one_floor(self):
         self.current_floor += 1
@@ -132,12 +133,12 @@ class Elevator(ElevatorInterface):
         self.current_floor -= 1
         print(f"The elevator arrived on the {self.current_floor} floor.")
 
-    def __str__(self):
+    def __str__(self) -> str:
         message = f"""
         Floor: {self.current_floor}
-        Passengers: {self.passengers}
+        Passengers: {list(self.passengers)}
         Directions: {self.direction}
-        Queue: {self.queue}
+        Queue: {sorted(self.queue)}
         State: {self.state}
         Doors open: {self.doors_open}
         """
@@ -150,19 +151,18 @@ class Passenger(PassengerInterface):
         self.name = name if name else generate_full_name()
         self.current_floor = current_floor
         self._target_floor = target_floor
-        self.respite = False  # parameter to simulate human activity on the floor
+        self.respite = True  # parameter to simulate human activity on the floor
         self.awaits = False
         self.in_elevator = False
 
     @property
-    def target_floor(self):
+    def target_floor(self) -> int:
         return self._target_floor
 
     @target_floor.setter
-    def target_floor(self, new_floor):
+    def target_floor(self, new_floor: int):
         if new_floor != self.current_floor:
             self._target_floor = new_floor
-            print(f"{self} had an idea to visit the {new_floor} floor")
         else:
             self.set_a_new_target()  # deliberate recursion
 
@@ -177,24 +177,27 @@ class Passenger(PassengerInterface):
             self.in_elevator = True
 
     def select_floor(self, elevator: Elevator) -> None:
-        elevator.add_floor_to_queue(self.target_floor)
-        print(f"{self} nervously presses the {self.target_floor}th floor button.")
+        if self.in_elevator:
+            elevator.add_floor_to_queue(self.target_floor)
+            print(f"{self} nervously presses the {self.target_floor}th floor button.")
 
     def set_a_new_target(self):
-        new_target = randint(DEFAULT_LOWER_FLOOR, DEFAULT_TOP_FLOOR)
+        target_list = set(range(DEFAULT_LOWER_FLOOR, DEFAULT_TOP_FLOOR + 1))
+        target_list.remove(self.target_floor)
+        new_target = choice(list(target_list))
         self.target_floor = new_target
 
-    def got_off_the_elevator(self, new_floor):
+    def got_off_the_elevator(self, new_floor: int):
         self.current_floor = new_floor
         self.respite = True
         self.awaits = False
         self.in_elevator = False
 
-    def move(self, elevator: Elevator):
+    def move(self, elevator: Elevator) -> None:
         if self.in_elevator:
             return
         elif self.respite:
-            reluctance = randint(0, 10)
+            reluctance = randint(0, 50)
             if not reluctance:
                 self.respite = False
                 self.set_a_new_target()
@@ -206,5 +209,31 @@ class Passenger(PassengerInterface):
         else:
             self.call_elevator(elevator)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.name
+
+
+def generate_random_passengers(count: int) -> list:
+    passengers = []
+    for i in range(count):
+        passengers.append(Passenger(
+            current_floor=randint(DEFAULT_LOWER_FLOOR, DEFAULT_TOP_FLOOR),
+            target_floor=randint(DEFAULT_LOWER_FLOOR, DEFAULT_TOP_FLOOR)
+        ))
+    return passengers
+
+
+def run_simulation():
+    elevator = Elevator(top_floor=24)
+    passengers = generate_random_passengers(20)
+
+    for iter in range(100):
+        elevator.move()
+        for passenger in passengers:
+            passenger.move(elevator)
+        print(elevator)
+        sleep(1)
+
+
+if __name__ == "__main__":
+    run_simulation()
