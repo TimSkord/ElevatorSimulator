@@ -45,7 +45,7 @@ class Elevator(ElevatorInterface):
         if self.movement_permitted:
             return
         weakest_link = choice(list(self.passengers))
-        self.passengers.remove(weakest_link)
+        self.passengers_getting_off({weakest_link})
         print(f"In an unequal fight, passenger {weakest_link} leaves the elevator.")
         return self.to_push_a_random_person_out_of_an_elevator()
 
@@ -66,10 +66,9 @@ class Elevator(ElevatorInterface):
 
     def passengers_getting_off(self, passenger_list: set):
         for passenger in passenger_list:
+            self.passengers.remove(passenger)
+            passenger.got_off_the_elevator(self.current_floor)
             print(f"{passenger} leaves the elevator with his head held high with pride")
-            passenger.set_floor(self.current_floor)
-        self.passengers -= passenger_list
-        print(f"--------------------> {self.passengers}")
 
     def passengers_entering(self, passenger):
         self.passengers.add(passenger)
@@ -123,6 +122,7 @@ class Elevator(ElevatorInterface):
 
     def rest(self):
         self.direction = None
+        self.close_doors()
 
     def up_one_floor(self):
         self.current_floor += 1
@@ -152,6 +152,7 @@ class Passenger(PassengerInterface):
         self._target_floor = target_floor
         self.respite = False  # parameter to simulate human activity on the floor
         self.awaits = False
+        self.in_elevator = False
 
     @property
     def target_floor(self):
@@ -166,32 +167,44 @@ class Passenger(PassengerInterface):
             self.set_a_new_target()  # deliberate recursion
 
     def call_elevator(self, elevator: Elevator) -> None:
-        if self.awaits:
-            print(f"{self} is excitedly waiting for the elevator to arrive.")
-        elif self.respite:
-            self.respite = False
-        else:
-            elevator.add_floor_to_queue(self.current_floor)
-            print(f"{self} called the elevator being on the {self.current_floor} floor.")
-            self.awaits = True
+        elevator.add_floor_to_queue(self.current_floor)
+        print(f"{self} called the elevator while on the {self.current_floor} floor.")
+        self.awaits = True
 
     def enter_the_elevator(self, elevator: Elevator) -> None:
-        if elevator.doors_open and elevator.current_floor == self.current_floor and not self.respite:
+        if elevator.doors_open:
             elevator.passengers_entering(self)
+            self.in_elevator = True
 
     def select_floor(self, elevator: Elevator) -> None:
         elevator.add_floor_to_queue(self.target_floor)
-        print(f"{self} decided to go to the {self.target_floor} floor")
+        print(f"{self} nervously presses the {self.target_floor}th floor button.")
 
     def set_a_new_target(self):
         new_target = randint(DEFAULT_LOWER_FLOOR, DEFAULT_TOP_FLOOR)
         self.target_floor = new_target
 
-    def set_floor(self, new_floor):
+    def got_off_the_elevator(self, new_floor):
         self.current_floor = new_floor
         self.respite = True
         self.awaits = False
-        self.set_a_new_target()
+        self.in_elevator = False
+
+    def move(self, elevator: Elevator):
+        if self.in_elevator:
+            return
+        elif self.respite:
+            reluctance = randint(0, 10)
+            if not reluctance:
+                self.respite = False
+                self.set_a_new_target()
+        elif self.current_floor == elevator.current_floor:
+            self.enter_the_elevator(elevator)
+            self.select_floor(elevator)
+        elif self.awaits:
+            pass
+        else:
+            self.call_elevator(elevator)
 
     def __repr__(self):
         return self.name

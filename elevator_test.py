@@ -203,15 +203,6 @@ class TestElevator:
         passengers[1].enter_the_elevator(self.elevator)
         passengers[1].select_floor(self.elevator)
 
-        for iter in range(20):
-            self.elevator.move()
-            for passenger in passengers:
-                if passenger not in self.elevator.passengers and passenger.current_floor != self.elevator.current_floor:
-                    passenger.call_elevator(self.elevator)
-                passenger.enter_the_elevator(self.elevator)
-                if passenger in self.elevator.passengers:
-                    passenger.select_floor(self.elevator)
-
 
 class TestPassenger:
 
@@ -233,7 +224,7 @@ class TestPassenger:
 
     def test_set_floor(self):
         self.passenger.target_floor = 2
-        self.passenger.set_floor(2)
+        self.passenger.set_a_new_target()
         assert self.passenger.target_floor != 2
 
     def test_call_elevator(self):
