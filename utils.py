@@ -40,4 +40,11 @@ def has_smaller(sorted_list: list, val: int) -> int:
 
 
 def generate_full_name() -> str:
+    """Generates a random passenger's full name"""
     return fake.name()
+
+
+def set_elevator_for_passengers(passengers_list, elevator):
+    """Sets up a specific elevator for passengers"""
+    for passenger in passengers_list:
+        passenger.set_elevator(elevator)

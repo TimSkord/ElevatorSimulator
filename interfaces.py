@@ -6,24 +6,24 @@ if TYPE_CHECKING:
 
 
 class ElevatorInterface(ABC):
+    """
+    Represents an elevator system.
 
-    @abstractmethod
-    def __init__(self, capacity=4, top_floor=10):
-        """
-        self.lower_floor - Number of the lowest floor of the building
-        self.top_floor - Number of floors in the building
-        self.capacity - Elevator capacity, determined during initialization
-        self.doors_open - True if the doors are open
-        self.current_floor - Current floor, default lower_floor
-        self.direction - Direction of elevator movement
-        self.queue - The number of floors to which the elevator was called
-        self.passengers - Passenger object list
-        """
+    Attributes:
+        lower_floor (int): The lowest floor the elevator can reach.
+        top_floor (int): The highest floor the elevator can reach.
+        capacity (int): The maximum number of passengers the elevator can carry.
+        doors_open (bool): Indicates if the elevator doors are open.
+        _current_floor (int): The floor where the elevator currently is.
+        direction (str or None): The direction in which the elevator is moving. Can be 'up', 'down' or None.
+        queue (set): A set of floors the elevator intends to visit.
+        passengers (set): A set of passengers currently in the elevator.
+        directions (dict): Dictionary mapping directions to methods.
+    """
 
     @abstractmethod
     def add_floor_to_queue(self, floor: int) -> None:
         """Adds a floor to the elevator service queue."""
-        pass
 
     def remove_floor_from_queue(self, floor: int) -> None:
         """Removes from the queue the floor on which the elevator has already stopped."""
@@ -31,23 +31,19 @@ class ElevatorInterface(ABC):
     @abstractmethod
     def move(self) -> None:
         """Performs the movement of the elevator to the next floor in the queue."""
-        pass
 
     @abstractmethod
     def open_doors(self) -> None:
         """Opens the elevator doors."""
-        pass
 
     @abstractmethod
     def close_doors(self) -> None:
         """Closes the elevator doors."""
-        pass
 
     @abstractmethod
     def choose_direction(self) -> None:
         """Determines the direction of elevator movement by analyzing who
          called the elevator where and when."""
-        pass
 
 
 class PassengerInterface(ABC):
@@ -59,17 +55,18 @@ class PassengerInterface(ABC):
         """
 
     @abstractmethod
-    def call_elevator(self, elevator: 'Elevator') -> None:
+    def set_elevator(self, elevator: 'Elevator'):
+        """Sets the Elevator for the passenger"""
+
+    @abstractmethod
+    def call_elevator(self) -> None:
         """Adds a floor to the elevator floor queue"""
-        pass
 
     @abstractmethod
-    def enter_the_elevator(self, elevator: 'Elevator') -> None:
+    def enter_the_elevator(self) -> None:
         """A passenger enters the elevator"""
-        pass
 
     @abstractmethod
-    def select_floor(self, elevator: 'Elevator') -> None:
+    def select_floor(self) -> None:
         """The passenger selects a floor, if the floor has already been selected
          - nothing happens."""
-        pass
