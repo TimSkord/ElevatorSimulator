@@ -3,6 +3,7 @@ from time import sleep
 from typing import Optional
 
 from constants import DEFAULT_LOWER_FLOOR, DEFAULT_TOP_FLOOR, DEFAULT_CAPACITY, UP_NAME, DOWN_NAME
+from exceptions import InvalidFloorError, ElevatorOverloadedError
 from interfaces import ElevatorInterface, PassengerInterface
 from utils import find_closest, has_larger, has_smaller, generate_full_name, set_elevator_for_passengers
 
@@ -59,11 +60,16 @@ class Elevator(ElevatorInterface):
         """Sets the current floor of the elevator if the new floor is within range."""
         if self.lower_floor <= new_floor <= self.top_floor:
             self._current_floor = new_floor
+        else:
+            raise InvalidFloorError(new_floor, self.lower_floor, self.top_floor)
 
     @property
-    def movement_permitted(self) -> bool:
+    def movement_permitted(self, raise_exception: bool = False) -> bool:
         """Determines if the elevator can move based on its passenger capacity."""
-        return len(self.passengers) <= self.capacity
+        overweight = len(self.passengers) <= self.capacity
+        if raise_exception:
+            raise ElevatorOverloadedError(self.capacity, len(self.passengers))
+        return overweight
 
     def eject_random_passenger(self) -> None:
         """Ejects a random passenger from the elevator until the elevator is within capacity."""
@@ -137,6 +143,8 @@ class Elevator(ElevatorInterface):
             """Helper function to determine the direction towards the closest floor."""
             if target_floor > current_floor:
                 return UP_NAME
+            elif target_floor == current_floor:
+                return None
             return DOWN_NAME
 
         sorted_queue = sorted(self.queue)
@@ -228,7 +236,7 @@ class Passenger(PassengerInterface):
         self._in_elevator = False
         self._elevator = None
 
-    def set_elevator(self, elevator: 'Elevator') -> None:
+    def set_elevator(self, elevator: Elevator) -> None:
         """Set the elevator for the passenger."""
         self._elevator = elevator
 
@@ -247,6 +255,8 @@ class Passenger(PassengerInterface):
     def select_floor(self) -> None:
         """Logic for the passenger to select a floor inside the elevator."""
         if self._in_elevator:
+            if self.target_floor not in range(self._elevator.lower_floor, self._elevator.top_floor + 1):
+                raise InvalidFloorError(self.target_floor, self._elevator.lower_floor, self._elevator.top_floor)
             self._elevator.add_floor_to_queue(self.target_floor)
             print(f"{self} nervously presses the {self.target_floor}th floor button.")
 
@@ -255,7 +265,6 @@ class Passenger(PassengerInterface):
         possible_floors = [floor for floor in range(DEFAULT_LOWER_FLOOR, DEFAULT_TOP_FLOOR + 1) if
                            floor != self.current_floor]
         new_floor = choice(possible_floors)
-        print(new_floor)
         self.target_floor = new_floor
 
     def got_off_the_elevator(self, new_floor: int) -> None:

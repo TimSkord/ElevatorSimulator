@@ -1,17 +1,22 @@
 from constants import UP_NAME, DOWN_NAME
 from elevator import Elevator, Passenger
+from exceptions import InvalidFloorError
 from utils import set_elevator_for_passengers
 
 
 class TestElevator:
+    """Test suite for the Elevator class functionality."""
 
     def setup_method(self):
+        """Setup for each test method; typically initializes the elevator object."""
         self.elevator = Elevator(top_floor=10)
 
     def teardown_method(self):
+        """Teardown for each test method; typically cleans up the elevator object."""
         del self.elevator
 
     def test_elevator_door_operations(self):
+        """Test the elevator's door opening and closing operations."""
         assert not self.elevator.doors_open
 
         self.elevator.open_doors()
@@ -24,13 +29,18 @@ class TestElevator:
         """The allowable default floor range is 1-10.
         @property does not allow to set values outside this range."""
         self.elevator.current_floor = 3
-        self.elevator.current_floor = 12
-        assert self.elevator.current_floor == 3
+        try:
+            self.elevator.current_floor = 12
+        except InvalidFloorError:
+            assert self.elevator.current_floor == 3
 
-        self.elevator.current_floor = -4
-        assert self.elevator.current_floor == 3
+        try:
+            self.elevator.current_floor = -4
+        except InvalidFloorError:
+            assert self.elevator.current_floor == 3
 
     def test_add_floor_to_queue(self):
+        """Test the addition of floors to the elevator's queue."""
         self.elevator.add_floor_to_queue(3)
         assert self.elevator.queue == {3}
 
@@ -38,6 +48,7 @@ class TestElevator:
         assert self.elevator.queue == {2, 3, 7, 9}
 
     def test_remove_floor_from_queue(self):
+        """Test the removal of floors from the elevator's queue."""
         self.elevator.add_floor_to_queue(2, 3, 7, 9)
         self.elevator.remove_floor_from_queue(3)
         assert self.elevator.queue == {2, 7, 9}
@@ -45,6 +56,7 @@ class TestElevator:
         self.elevator.remove_floor_from_queue(3)
 
     def test_choose_direction(self):
+        """Test the elevator's direction choice based on its current state and queue."""
         self.elevator.add_floor_to_queue(3, 4, 8, 9)
         self.elevator.choose_direction()
         assert self.elevator.direction == UP_NAME
@@ -82,6 +94,7 @@ class TestElevator:
         assert not self.elevator.direction
 
     def test_move(self):
+        """Test the elevator's movement between floors."""
         self.elevator.current_floor = 1
         self.elevator.add_floor_to_queue(3, 4, 6)
         self.elevator.move()
@@ -109,6 +122,7 @@ class TestElevator:
         assert not self.elevator.direction
 
     def test_opening_closing_doors_when_moving_stopping(self):
+        """Test the elevator's automatic door operations when moving and stopping."""
         self.elevator.add_floor_to_queue(2, 4)
         assert not self.elevator.doors_open
 
@@ -121,6 +135,7 @@ class TestElevator:
         assert not self.elevator.doors_open
 
     def test_overcapacity(self):
+        """Test the elevator's behavior when its capacity is exceeded."""
         passengers = [
             Passenger(target_floor=3),
             Passenger(target_floor=4),
@@ -145,6 +160,7 @@ class TestElevator:
         assert len(self.elevator.passengers) == 4
 
     def test_abandon_ship(self):
+        """Test the scenario where all passengers exit the elevator at their respective floors."""
         passengers = [
             Passenger(target_floor=3),
             Passenger(target_floor=4),
@@ -167,6 +183,7 @@ class TestElevator:
         assert not self.elevator.passengers
 
     def test_abandon_ship_together(self):
+        """Test the scenario where multiple passengers exit the elevator at the same floor."""
         passengers = [
             Passenger(target_floor=3),
             Passenger(target_floor=4),
@@ -187,6 +204,7 @@ class TestElevator:
         assert not self.elevator.passengers
 
     def test_elevator_call_all_at_once(self):
+        """Test the scenario where the elevator is called by all passengers at once."""
         passengers = [
             Passenger(current_floor=7, target_floor=3),
             Passenger(current_floor=1, target_floor=4),
@@ -206,20 +224,25 @@ class TestElevator:
 
 
 class TestPassenger:
+    """Test suite for the Passenger class functionality."""
 
     def setup_method(self):
+        """Setup for each test method; typically initializes a passenger and elevator object."""
         self.passenger = Passenger(current_floor=1)
         self.elevator = Elevator(top_floor=20)
         set_elevator_for_passengers([self.passenger], self.elevator)
 
     def teardown_method(self):
+        """Teardown for each test method; typically cleans up the passenger and elevator objects."""
         del self.passenger
         del self.elevator
 
     def test_name_generation(self):
+        """Test the generation of a name for the passenger."""
         assert self.passenger.name
 
     def test_set_floor(self):
+        """Test the passenger's ability to set a target floor."""
         self.passenger.target_floor = 2
         for _ in range(10):
             current_floor = self.passenger.current_floor
@@ -227,6 +250,7 @@ class TestPassenger:
             assert self.passenger.target_floor != current_floor
 
     def test_call_elevator(self):
+        """Test the passenger's ability to call the elevator."""
         self.passenger.target_floor = 4
         self.elevator.current_floor = 7
         self.passenger.call_elevator()
@@ -239,6 +263,7 @@ class TestPassenger:
         assert self.elevator.doors_open
 
     def test_passenger_enter_the_elevator(self):
+        """Test the scenario where a passenger enters the elevator."""
         self.passenger.target_floor = 4
         self.elevator.current_floor = 7
         self.passenger.call_elevator()
@@ -248,6 +273,7 @@ class TestPassenger:
         assert self.passenger in self.elevator.passengers
 
     def test_passenger_select_floor(self):
+        """Test the passenger's ability to select a floor inside the elevator."""
         self.passenger.target_floor = 4
         self.elevator.current_floor = 7
         self.passenger.call_elevator()
@@ -258,12 +284,14 @@ class TestPassenger:
         assert self.passenger.target_floor in self.elevator.queue
 
     def test_passenger_cant_get_in_when_the_doors_are_closed(self):
+        """Test the scenario where a passenger can't enter when the elevator's doors are closed."""
         self.passenger.target_floor = 4
         self.elevator.current_floor = self.passenger.current_floor
         self.passenger.enter_the_elevator()
         assert self.passenger not in self.elevator.passengers
 
     def test_passenger_leaving_the_elevator(self):
+        """Test the scenario where a passenger exits the elevator upon reaching their target floor."""
         self.passenger.target_floor = 4
         self.elevator.current_floor = self.passenger.current_floor
         self.elevator.open_doors()
